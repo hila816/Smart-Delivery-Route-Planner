@@ -7,30 +7,92 @@
 
 using namespace std;
 
-class Graph {
+// Node to store adjacency list
+class AdjNode {
 public:
-    unordered_map<int, vector<pair<int, int>>> adjList; // Adjacency list to store nodes and weighted edges
+    int vertex;
+    int weight;  // To store the weight (travel time) of the edge
+    AdjNode* next;
 
-    void addLocation(int location) {
-        adjList[location] = {}; // Add a new location (node)
+    AdjNode(int data, int w = 0) {
+        vertex = data;
+        weight = w;
+        next = NULL;
+    }
+};
+
+// Adjacency List representation
+class Graph {
+private:
+    int v;  // Number of vertices (locations)
+    AdjNode** graph;  // Adjacency list
+
+public:
+    Graph(int vertices) {
+        v = vertices;
+        graph = new AdjNode*[v];
+        for (int i = 0; i < v; ++i)
+            graph[i] = NULL;
     }
 
-    void addRoad(int u, int v, int weight) {
-        adjList[u].push_back({v, weight}); 
-        adjList[v].push_back({u, weight}); // Undirected graph
+    // Function to add an edge with weight (travel time) between two vertices
+    void addEdge(int source, int destination, int weight) {
+        AdjNode* node = new AdjNode(destination, weight);
+        node->next = graph[source];
+        graph[source] = node;
     }
 
-   
+    // Function to add a vertex between two vertices
+    void addVertex(int vk, int source, int destination, int weight) {
+        addEdge(source, vk, weight);
+        addEdge(vk, destination, weight);
+    }
 
-    void updateRoad(int u, int v, int newWeight) {
-        for (auto &edge : adjList[u]) {
-            if (edge.first == v) edge.second = newWeight;
+    // Function to print the adjacency list
+    void printGraph() {
+        for (int i = 0; i < v; ++i) {
+            if (graph[i] == NULL)
+                continue;
+            cout << i << ": ";
+            AdjNode* temp = graph[i];
+            while (temp != NULL) {
+                cout << "-> " << temp->vertex << "(" << temp->weight << " mins) ";
+                temp = temp->next;
+            }
+            cout << endl;
         }
-        for (auto &edge : adjList[v]) {
-            if (edge.first == u) edge.second = newWeight;
+    }
+
+    // Function to delete a vertex
+    void delVertex(int k) {
+        for (int i = 0; i < v; ++i) {
+            AdjNode *curr = graph[i], *prev = nullptr;
+            if (i == k) {
+                graph[i] = nullptr;
+                while (curr != nullptr) {
+                    AdjNode* next = curr->next;
+                    delete (curr);
+                    curr = next;
+                }
+            } else {
+                while (curr != nullptr) {
+                    if (curr->vertex == k) {
+                        if (prev == nullptr) {
+                            graph[i] = curr->next;  // Remove from the beginning
+                        } else {
+                            prev->next = curr->next;  // Remove from the middle/end
+                        }
+                        delete curr;
+                        break;
+                    }
+                    prev = curr;
+                    curr = curr->next;
+                }
+            }
         }
     }
 
+    // BFS function to explore delivery routes
     void BFS(int start) {
         queue<int> q;
         unordered_map<int, bool> visited;
@@ -44,25 +106,27 @@ public:
             q.pop();
             cout << node << " ";
 
-            for (auto &neighbor : adjList[node]) {
-                if (!visited[neighbor.first]) {
-                    visited[neighbor.first] = true;
-                    q.push(neighbor.first);
+            for (AdjNode* neighbor = graph[node]; neighbor != NULL; neighbor = neighbor->next) {
+                if (!visited[neighbor->vertex]) {
+                    visited[neighbor->vertex] = true;
+                    q.push(neighbor->vertex);
                 }
             }
         }
         cout << endl;
     }
 
+    // Dijkstra’s Algorithm to find the shortest delivery route from a starting location
     void dijkstra(int src) {
-        unordered_map<int, int> dist;
-        unordered_map<int, int> prev;
+        unordered_map<int, int> dist; // Stores the shortest distance from src to other nodes
 
-        for (auto &pair : adjList) {
-            dist[pair.first] = numeric_limits<int>::max();
+        // Initialize all distances as "infinity"
+        for (int i = 0; i < v; ++i) {
+            dist[i] = numeric_limits<int>::max();
         }
-        dist[src] = 0;
+        dist[src] = 0; // Distance from source to itself is 0
 
+        // Min-heap (priority queue) for selecting the shortest distance node
         priority_queue<pair<int, int>, vector<pair<int, int>>, greater<pair<int, int>>> pq;
         pq.push({0, src});
 
@@ -70,55 +134,61 @@ public:
             int u = pq.top().second;
             pq.pop();
 
-            for (auto &neighbor : adjList[u]) {
-                int v = neighbor.first;
-                int weight = neighbor.second;
+            for (AdjNode* neighbor = graph[u]; neighbor != NULL; neighbor = neighbor->next) {
+                int v = neighbor->vertex;
+                int weight = neighbor->weight;
 
+                // Relaxation step: Update the shortest distance if a shorter path is found
                 if (dist[u] + weight < dist[v]) {
                     dist[v] = dist[u] + weight;
-                    prev[v] = u;
                     pq.push({dist[v], v});
                 }
             }
         }
 
-        cout << "Shortest Delivery Routes from Restaurant:" << endl;
-        for (auto &pair : dist) {
-            cout << "To Location " << pair.first << " -> " << pair.second << " mins" << endl;
+        // Output the shortest delivery routes
+        cout << "Shortest Delivery Routes from Qura Restaurant:" << endl;
+        for (auto& pair : dist) {
+            if (pair.second == numeric_limits<int>::max()) {
+                cout << "To Location " << pair.first << " -> Unreachable" << endl;
+            } else {
+                cout << "To Location " << pair.first << " -> " << pair.second << " mins" << endl;
+            }
         }
     }
 };
 
 int main() {
-    Graph g;
+    int V = 8;  // 8 locations (Qura Restaurant + 7 Customers)
+    Graph g(V);
 
-    // Add locations: Restaurant, Customers (1 = Qura Hotel, 2-6 = Customers)
-    g.addLocation(1); // Qura Hotel
-    g.addLocation(2); // Abebe
-    g.addLocation(3); // Alemu
-    g.addLocation(4); // Samual
-    g.addLocation(5); // Aster
-    g.addLocation(6); // Helen
+    // Initial roads (edges with weights)
+    g.addEdge(0, 1, 4); // Qura Restaurant (0) -> Abebe (1)
+    g.addEdge(0, 2, 7); // Qura Restaurant (0) -> Alemu (2)
+    g.addEdge(1, 3, 3); // Abebe (1) -> Aster (3)
+    g.addEdge(2, 4, 2); // Alemu (2) -> Helen (4)
+    g.addEdge(3, 5, 6); // Aster (3) -> Belaynsh (5)
+    g.addEdge(4, 6, 5); // Helen (4) -> Kebede (6)
 
-    // Add edges: roads between locations
-    g.addRoad(1, 2, 4); // Qura Hotel -> Abebe
-    g.addRoad(1, 3, 7); // Qura Hotel -> Alemu
-    g.addRoad(2, 4, 3); // Abebe -> Samual
-    g.addRoad(3, 5, 2); // Alemu -> Aster
-    g.addRoad(4, 6, 6); // Samual -> Helen
-    g.addRoad(5, 6, 5); // Aster -> Helen
+    // Print initial adjacency list
+    cout << "Initial Adjacency List:" << endl;
+    g.printGraph();
 
-    // Update road: Change the time from Customer 3 (Alemu) to Customer 4 (Samual)
-    g.updateRoad(3, 4, 10); // Alemu -> Samual (updated travel time)
+    // Add vertex (New Customer 7: Kebede)
+    g.addVertex(7, 3, 2, 5); // Add Kebede (7) between Aster (3) and Alemu (2) with 5 minutes
+    cout << "Adjacency List after adding vertex 7:" << endl;
+    g.printGraph();
 
-    // Add new road: Aster (Customer 5) to Qura Hotel (Restaurant)
-    g.addRoad(5, 1, 8); // Aster -> Qura Hotel
+    // Delete vertex (Customer 4: Helen)
+    g.delVertex(4); // Delete Helen (4)
+    cout << "Adjacency List after deleting vertex 4:" << endl;
+    g.printGraph();
 
-    // Display BFS traversal from the restaurant (Qura Hotel)
-    g.BFS(1);
+    // Perform BFS starting from the Qura Restaurant (vertex 0)
+    g.BFS(0);
 
-    // Find the shortest path from Qura Hotel (1) to other customers
-    g.dijkstra(1);
+    // Perform Dijkstra's algorithm to find the shortest path from Qura Restaurant (vertex 0)
+    g.dijkstra(0);
 
     return 0;
 }
