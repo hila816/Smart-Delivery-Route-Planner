@@ -43,6 +43,26 @@ Remove Edges: For each vertex connected to the one being deleted, remove the ref
 
 Delete Vertex: Finally, delete the node corresponding to the vertex from the adjacency list.
 
-Example:
+c) Updating Edge Weight:
 
-If vertex 4 is deleted, you will remove the edges that point to vertex 4 from the other vertices in the list.
+Changing the weight of an edge dynamically allows real-time updates (e.g., traffic changes).
+
+The function traverses the adjacency list to find the edge and updates its weight.
+
+Traversal & Shortest Path Algorithms
+
+a) Breadth-First Search (BFS)
+
+BFS is used to explore all possible delivery routes level by level.
+
+It uses a queue to ensure nodes are processed in order of discovery.
+
+BFS is useful for finding the shortest unweighted path.
+
+b) Dijkstra’s Algorithm (Shortest Path)
+
+Dijkstra’s Algorithm finds the shortest path from the restaurant (source) to all customers.
+
+Uses a priority queue (min-heap) to always process the node with the smallest travel time first.
+
+Greedy Algorithm: Expands the shortest known path to find the next shortest
